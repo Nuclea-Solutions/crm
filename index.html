@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NUCLEA — Prospección</title>
+<style>
+  /* ============================================================
+     Sistema de diseño extraído de starlink.com (jul 2026):
+     bg #000 · texto #FAFAFA · secundario rgba(250,250,250,.7)
+     labels 12px/700 ls .4px rgba(250,250,250,.55) UPPERCASE
+     fuente DIN · botón: bg #FAFAFA, texto rgba(0,0,0,.87),
+     14px/700, radius 4px, pad 6px 32px · contenedores radius 0
+     monocromático — sin acentos de color
+     ============================================================ */
+  :root{color-scheme:dark;
+    --bg:#000; --text:#FAFAFA; --t70:rgba(250,250,250,.7); --t55:rgba(250,250,250,.55);
+    --t35:rgba(250,250,250,.35); --hair:rgba(250,250,250,.14); --hair2:rgba(250,250,250,.25);
+    --panel:rgba(250,250,250,.045); --panel2:rgba(250,250,250,.08);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'D-DIN','DIN Alternate','Bahnschrift',Roboto,Arial,Verdana,sans-serif;
+    background:var(--bg);color:var(--text);font-size:14px;letter-spacing:.15px;padding:0 22px 40px}
+  ::selection{background:rgba(250,250,250,.25)}
+  a{color:var(--text)}
+
+  .label{font-size:12px;font-weight:700;letter-spacing:.4px;color:var(--t55);text-transform:uppercase}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:22px 0 18px;flex-wrap:wrap}
+  .brand{display:flex;align-items:baseline;gap:14px}
+  .brand b{font-size:22px;font-weight:700;letter-spacing:3px}
+  .brand span{font-size:12px;font-weight:700;letter-spacing:.4px;color:var(--t55);text-transform:uppercase}
+  .tabs{display:flex;background:rgba(250,250,250,.08);border-radius:6px;padding:3px}
+  .tab{background:transparent;border:none;color:var(--t70);padding:7px 22px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;border-radius:4px}
+  .tab.on{background:#FAFAFA;color:rgba(0,0,0,.87)}
+
+  .stats{display:flex;margin:6px 0 26px;flex-wrap:wrap}
+  .stat{padding:14px 34px 14px 0;margin-right:34px;border-right:1px solid var(--hair)}
+  .stat:last-child{border-right:none}
+  .stat b{display:block;font-size:34px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+  .stat b em{font-style:normal;font-size:18px;color:var(--t55)}
+  .stat span{font-size:12px;font-weight:700;letter-spacing:.4px;color:var(--t55);text-transform:uppercase}
+
+  /* ---------- KANBAN ---------- */
+  .board{display:grid;grid-template-columns:repeat(6,minmax(212px,1fr));gap:1px;background:var(--hair);border:1px solid var(--hair);overflow-x:auto;align-items:stretch}
+  @media(max-width:1150px){.board{grid-template-columns:repeat(6,232px)}}
+  .col{background:var(--bg);padding:12px 10px;min-height:260px}
+  .col.drag{background:rgba(250,250,250,.03);outline:1px solid var(--hair2);outline-offset:-1px}
+  .col h2{font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;margin:0 2px 12px;color:var(--t55)}
+  .col h2 .n{color:var(--text);font-variant-numeric:tabular-nums}
+
+  .card{background:var(--panel);border:1px solid var(--hair);padding:13px 14px;margin-bottom:8px;cursor:grab}
+  .card:hover{border-color:var(--hair2);background:var(--panel2)}
+  .card:active{cursor:grabbing}
+  .card .nombre{font-weight:700;font-size:15px;line-height:1.25}
+  .card .zona{color:var(--t55);font-size:11.5px;margin:2px 0 9px;text-transform:uppercase;letter-spacing:.4px;font-weight:700}
+  .datos{display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);padding:7px 0;margin-bottom:9px;gap:8px}
+  .datos .precio{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;cursor:pointer;background:none;border:none;color:var(--text);font-family:inherit;padding:0}
+  .datos .precio:hover{color:var(--t70)}
+  .datos .rating{font-size:12.5px;color:var(--t70);font-variant-numeric:tabular-nums}
+  .estado{font-size:11.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--t55);margin-bottom:8px}
+  .estado.alerta{color:#FAFAFA;background:rgba(250,80,80,.22);border:1px solid rgba(250,120,120,.4);display:inline-block;padding:2px 8px}
+  .notas{font-size:12.5px;color:var(--t70);line-height:1.5;margin-bottom:10px;white-space:pre-wrap}
+  .acciones{display:flex;gap:5px;flex-wrap:wrap}
+  .acciones a,.acciones button{border:1px solid var(--hair2);background:transparent;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;color:var(--t70);line-height:1.4;font-family:inherit;border-radius:4px;letter-spacing:.3px}
+  .acciones a:hover,.acciones button:hover{color:rgba(0,0,0,.87);background:#FAFAFA;border-color:#FAFAFA}
+  .acciones .demo{background:#FAFAFA;color:#0A0C0F;border-color:#FAFAFA;font-weight:700}
+  .acciones .demo:hover{background:#fff;border-color:#fff}
+  .acciones .demo.off{background:transparent;color:var(--t35);border-color:var(--hair);cursor:default}
+  .acciones .demo.off:hover{background:transparent;color:var(--t35)}
+
+  /* ---------- LEADS ---------- */
+  .controles{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
+  .buscar{background:transparent;border:1px solid var(--hair2);color:var(--text);padding:8px 14px;font-size:14px;min-width:240px;font-family:inherit;border-radius:4px;letter-spacing:.15px}
+  .buscar::placeholder{color:var(--t35)}
+  .buscar:focus{outline:none;border-color:var(--text)}
+  .filtro{background:transparent;border:1px solid var(--hair2);color:var(--t70);padding:7px 16px;font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;cursor:pointer;font-family:inherit;border-radius:4px}
+  .filtro.on{background:#FAFAFA;color:rgba(0,0,0,.87);border-color:#FAFAFA}
+  table{width:100%;border-collapse:collapse;border:1px solid var(--hair)}
+  th{font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--t55);text-align:left;padding:11px 14px;border-bottom:1px solid var(--hair2)}
+  td{padding:11px 14px;border-bottom:1px solid var(--hair);font-size:14px;vertical-align:middle}
+  tr:hover td{background:var(--panel)}
+  td a.neg{font-weight:700;text-decoration:none;border-bottom:1px solid var(--hair2)}
+  td a.neg:hover{border-color:var(--text)}
+  td .sub{color:var(--t55);font-size:11.5px;display:block;text-transform:uppercase;letter-spacing:.4px;font-weight:700;margin-top:1px}
+  .wa-si{font-weight:700} .wa-no{color:var(--t35)} .wa-q{color:var(--t70);border-bottom:1px dashed var(--t55)}
+  .mini{border:1px solid var(--hair2);background:transparent;color:var(--t70);padding:5px 12px;font-size:12px;font-weight:700;letter-spacing:.3px;cursor:pointer;font-family:inherit;border-radius:4px;text-decoration:none;white-space:nowrap}
+  .mini:hover{background:#FAFAFA;color:rgba(0,0,0,.87);border-color:#FAFAFA}
+  .fuente{font-size:11.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--t55);text-decoration:none;border-bottom:1px solid var(--hair)}
+  a.fuente:hover{color:var(--text);border-color:var(--text)}
+  .vacio{color:var(--t35);text-align:center;padding:34px;font-size:12px;letter-spacing:.4px;text-transform:uppercase;font-weight:700}
+  .waico{width:24px;height:24px;display:inline-block;vertical-align:middle}
+  .wa-link:hover .waico{transform:scale(1.15)}
+  .waico.si{color:#25D366} .waico.q{color:var(--t35)} .waico.noo{color:var(--t35)}
+  .prio{font-size:11px;font-weight:700;letter-spacing:.4px;padding:3px 10px;border-radius:4px;white-space:nowrap}
+  .p-alta{background:#FAFAFA;color:rgba(0,0,0,.87)}
+  .p-media{border:1px solid var(--hair2);color:var(--text)}
+  .p-baja{border:1px solid var(--hair);color:var(--t55)}
+  .p-desc{color:var(--t35);text-decoration:line-through}
+  .fila-desc td{opacity:.45}
+
+  /* ---------- MODAL ---------- */
+  dialog{border:1px solid var(--hair2);padding:0;max-width:440px;width:92vw;background:#0A0A0A;color:var(--text)}
+  dialog::backdrop{background:rgba(0,0,0,.75)}
+  .m-body{padding:22px}
+  .m-body h3{margin-bottom:18px;font-size:12px;text-transform:uppercase;letter-spacing:.4px;font-weight:700;color:var(--t55)}
+  .campo{margin-bottom:12px}
+  .campo label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--t55);margin-bottom:4px;font-weight:700}
+  .campo input,.campo textarea,.campo select{width:100%;border:1px solid var(--hair2);padding:8px 10px;font-size:14px;font-family:inherit;background:#000;color:var(--text);border-radius:4px}
+  .campo input:focus,.campo textarea:focus,.campo select:focus{outline:none;border-color:var(--text)}
+  .campo textarea{min-height:70px;resize:vertical}
+  .fila{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .m-foot{display:flex;justify-content:space-between;gap:10px;padding:16px 22px;border-top:1px solid var(--hair)}
+  .btn{border:none;border-radius:4px;background:#FAFAFA;color:rgba(0,0,0,.87);padding:8px 26px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit}
+  .btn.sec{background:transparent;color:var(--text);border:1px solid var(--hair2)}
+  .btn.peligro{background:transparent;color:rgba(250,120,120,.9);border:1px solid rgba(250,120,120,.4)}
+  .btn:hover{opacity:.85}
+  .escalera{display:flex;gap:6px;margin-top:6px}
+  .escalera button{flex:1;border:1px solid var(--hair2);background:transparent;color:var(--t70);padding:6px 0;font-size:13px;cursor:pointer;font-family:inherit;font-variant-numeric:tabular-nums;border-radius:4px;font-weight:700}
+  .escalera button.activo{background:#FAFAFA;color:rgba(0,0,0,.87);border-color:#FAFAFA}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><b>NUCLEA</b><span>Prospección web</span></div>
+  <div class="tabs">
+    <button class="tab on" id="tab-pipe" onclick="setView('pipe')">Pipeline</button>
+    <button class="tab" id="tab-leads" onclick="setView('leads')">Leads</button>
+  </div>
+</div>
+
+<div id="view-pipe">
+  <div class="stats" id="stats"></div>
+  <div class="board" id="board"></div>
+</div>
+
+<div id="view-leads" style="display:none">
+  <div class="stats" id="stats-leads"></div>
+  <div class="controles">
+    <input class="buscar" id="q" placeholder="Buscar…" oninput="renderLeads()">
+    <button class="filtro on" data-f="todos" onclick="setFiltro(this)">Todos</button>
+    <button class="filtro" data-f="alta" onclick="setFiltro(this)">Alta</button>
+    <button class="filtro" data-f="media" onclick="setFiltro(this)">Media</button>
+    <button class="filtro" data-f="baja" onclick="setFiltro(this)">Baja</button>
+    <button class="filtro" data-f="desc" onclick="setFiltro(this)">Descartados</button>
+  </div>
+  <table>
+    <thead><tr><th>Prioridad</th><th>Negocio</th><th>Rating</th><th>Teléfono</th><th>WhatsApp</th><th>Web</th><th>Fuente</th><th></th></tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<dialog id="modal">
+  <div class="m-body">
+    <h3 id="m-titulo">Prospecto</h3>
+    <div class="campo"><label>Negocio</label><input id="f-name"></div>
+    <div class="fila">
+      <div class="campo"><label>Zona</label><input id="f-zona"></div>
+      <div class="campo"><label>Teléfono</label><input id="f-tel"></div>
+    </div>
+    <div class="fila">
+      <div class="campo"><label>Rating</label><input id="f-rating" type="number" step="0.1" min="0" max="5"></div>
+      <div class="campo"><label># Reseñas</label><input id="f-reviews" type="number" min="0"></div>
+    </div>
+    <div class="campo"><label>URL del prototipo</label><input id="f-url" placeholder="https://…"></div>
+    <div class="campo"><label>Link de fuente (Maps, directorio…)</label><input id="f-src" placeholder="https://…"></div>
+    <div class="campo"><label>Precio ofertado · MXN</label><input id="f-price" type="number" min="0">
+      <div class="escalera" id="escalera"></div>
+    </div>
+    <div class="fila">
+      <div class="campo"><label>Último contacto</label><input id="f-last" type="date"></div>
+      <div class="campo"><label>Etapa</label><select id="f-col"></select></div>
+    </div>
+    <div class="campo"><label>Notas</label><textarea id="f-notes"></textarea></div>
+  </div>
+  <div class="m-foot">
+    <button class="btn peligro" id="m-del" onclick="borrar()">Eliminar</button>
+    <div style="display:flex;gap:8px">
+      <button class="btn sec" onclick="modal.close()">Cancelar</button>
+      <button class="btn" onclick="guardar()">Guardar</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="lmodal">
+  <div class="m-body">
+    <h3 id="l-titulo">Lead</h3>
+    <div class="campo"><label>Negocio</label><input id="l-name"></div>
+    <div class="fila">
+      <div class="campo"><label>Zona</label><input id="l-zona"></div>
+      <div class="campo"><label>Teléfono</label><input id="l-tel"></div>
+    </div>
+    <div class="fila">
+      <div class="campo"><label>Rating</label><input id="l-rating" type="number" step="0.1" min="0" max="5"></div>
+      <div class="campo"><label># Reseñas</label><input id="l-reviews" type="number" min="0"></div>
+    </div>
+    <div class="fila">
+      <div class="campo"><label>WhatsApp</label><select id="l-wa"><option value="q">Sin verificar</option><option value="si">Sí</option><option value="no">No</option></select></div>
+      <div class="campo"><label>Sitio web actual</label><input id="l-web"></div>
+    </div>
+    <div class="fila">
+      <div class="campo"><label>Fuente</label><select id="l-fuente">
+        <option>Google Maps</option><option>Sección Amarilla</option><option>Facebook</option><option>Instagram</option><option>Referido</option><option>Otro</option>
+      </select></div>
+      <div class="campo"><label>Prioridad</label><select id="l-prio">
+        <option value="alta">Alta</option><option value="media">Media</option><option value="baja">Baja</option><option value="desc">Descartar</option>
+      </select></div>
+    </div>
+    <div class="campo"><label>Link de fuente</label><input id="l-src" placeholder="https://…"></div>
+    <div class="campo"><label>Nota</label><textarea id="l-notes"></textarea></div>
+  </div>
+  <div class="m-foot">
+    <button class="btn peligro" id="l-del" onclick="borrarLead()">Eliminar</button>
+    <div style="display:flex;gap:8px">
+      <button class="btn sec" onclick="lmodal.close()">Cancelar</button>
+      <button class="btn" onclick="guardarLead()">Guardar</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+const KEY='nuclea-crm-v3';
+const LADDER=[1900,1600,1300,990];
+const COLS=[
+  {id:'prospectado', t:'Prospectado'},
+  {id:'pagina',      t:'Página creada'},
+  {id:'contactado',  t:'Contactado'},
+  {id:'negociacion', t:'Negociación'},
+  {id:'cerrado',     t:'Cerrado'},
+  {id:'perdido',     t:'Perdido'},
+];
+const maps=(n,z)=>'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(n+' '+(z||''));
+const SEED_PIPE=[
+ {id:'ruggero',name:'Automotriz Ruggero',zona:'Col. Arcos, GDL',tel:'523334043206',rating:4.8,reviews:159,
+  url:'https://nuclea-solutions.github.io/ruggero-demo/',src:maps('AUTOMOTRIZ RUGGERO','Av Niños Héroes 2440 Guadalajara'),
+  price:1900,col:'contactado',last:'2026-07-04',
+  notes:'Mensaje + PDF enviados 4-jul. Dueño responde reseñas personalmente. Al responder: pedir checklist (fotos, video, horarios, dominio).'},
+ {id:'arellano',name:'Arellano Automotriz',zona:'Sta. Margarita, Zapopan',tel:'523312467062',rating:5.0,reviews:9,
+  url:'',src:maps('Arellano Automotriz','Sta Esther 316 Zapopan'),price:1900,col:'prospectado',last:'2026-07-03',
+  notes:'Prioridad ALTA. FB e Instagram activos — les importa el marketing y no tienen web.'},
+ {id:'clinica',name:'Taller Clínica Automotriz',zona:'Zona Centro, GDL',tel:'523330736339',rating:4.5,reviews:69,
+  url:'',src:maps('Taller mecanico Clínica Automotriz','Juan Álvarez 723 Guadalajara'),price:1900,col:'prospectado',last:'2026-07-03',
+  notes:'WhatsApp personal del dueño (Bryan García). Queja reciente de $25k — la web le ayuda a controlar su narrativa.'},
+ {id:'especializado',name:'Taller Mec. Especializado Automotriz',zona:'Sta. Margarita, Zapopan',tel:'522227532761',rating:4.7,reviews:13,
+  url:'',src:maps('Taller Mecánico Especializado Automotriz','Sta Esther 81B Zapopan'),price:1900,col:'prospectado',last:'2026-07-03',
+  notes:'Ficha de Maps SIN reclamar. Lada 222 = celular del dueño. Ofrecer también reclamar su ficha.'},
+ {id:'flores',name:'Taller Mecánico Flores',zona:'Sta. Margarita, Zapopan',tel:'523316154077',rating:3.2,reviews:5,
+  url:'',src:maps('Taller Mecánico Flores','Calle Sta Mercedes 845 Zapopan'),price:1900,col:'prospectado',last:'2026-07-03',
+  notes:'Abierto 24h. Ya invierte en promoción en FB. Vender web + estrategia de reseñas para reparar el 3.2.'},
+ {id:'cardoctor',name:'Car Doctor GDL',zona:'Col. Del Sur, GDL',tel:'523310446063',rating:4.6,reviews:157,
+  url:'',src:maps('Taller Mecánico Car Doctor GDL','Av Cruz del Sur 100 Guadalajara'),price:1900,col:'prospectado',last:'2026-07-03',
+  notes:'Prioridad BAJA: ya tiene web y TikTok viral. Solo rediseño premium.'},
+];
+const L=(name,zona,rating,reviews,tel,wa,web,notes)=>({id:'l'+tel.replace(/\D/g,''),name,zona,rating,reviews,tel,wa,
+  web:web||'',fuente:'Google Maps',src:maps(name,zona==='GDL'?'Guadalajara Jalisco':zona+' Jalisco'),giro:'Taller mecánico',notes:notes||''});
+const SEED_LEADS=[
+ L('Taller Mecánico MARPA','GDL',4.9,62,'33 1220 5133','q','','Verificar WhatsApp — rating altísimo'),
+ L('Mecánica Miraflores','GDL',4.8,74,'33 3825 3059','q','','Verificar WhatsApp'),
+ L('Taller Servicio Klaus','GDL',4.5,173,'33 3619 4769','q','sí','Verificar WhatsApp — muchas reseñas, ya tiene web'),
+ L('Taller Mecánico el Rulas','GDL',4.5,67,'33 3658 6088','q','','Verificar WhatsApp'),
+ L('Serv. Mecánico Espec. Espinoza','GDL',4.8,35,'33 1676 5422','no',''),
+ L('Servicio Dueñas','GDL',4.7,144,'33 3647 6590','no',''),
+ L('Taller Mecánico Luevano','Zapopan',4.7,65,'33 1597 4321','no',''),
+ L('Taller Mecánico "El Track"','Zapopan',4.7,19,'33 3633 9261','no',''),
+ L('Mecánica Especializada','GDL',4.7,39,'33 3616 5545','no','sí'),
+ L('Servicio Automotriz Carmelo','GDL',4.7,36,'33 3636 2753','no',''),
+ L('Aranmex Diesel','GDL',4.6,42,'33 3574 5635','no','sí'),
+ L('Sadec Automotriz','Zapopan',4.6,98,'33 3636 0403','no','sí'),
+ L('Auto West','GDL',4.6,123,'33 3630 0770','no','sí'),
+ L('Servicio Automotriz Zavala','GDL',4.6,141,'33 3630 3252','no',''),
+ L('Técnica Automotriz Alpa','GDL',4.6,81,'33 3825 9852','no',''),
+ L('Taller Mecánico Las Tres Cruces','GDL',4.5,282,'33 3663 2629','no',''),
+ L('Automecánica Gutiérrez','GDL',4.5,87,'33 3810 5758','no',''),
+ L('Serv. Esp. Automotriz Jericó','GDL',4.5,81,'33 3126 5110','no',''),
+ L('Taller Automotriz Quiroga','GDL',4.4,140,'33 3617 3759','no',''),
+ L('Jmv Mecánica Automotriz','Zapopan',4.4,47,'33 1561 7608','no',''),
+ L('Servicio Automotriz Eléctrico','GDL',4.3,13,'33 3827 2523','no',''),
+ L('Taller Mecánico (C. Libertad 623)','GDL',4.1,20,'33 3833 0041','no',''),
+];
+
+/* Prioridad analizada (4-jul-2026): canal de contacto (WhatsApp) + ¿ya tiene web? + reputación */
+const PRIO_DEF={
+ '3312205133':['alta','4.9★ sin web. Siguiente paso: verificar WhatsApp — si tiene, es el mejor prospecto de la base.'],
+ '3338253059':['alta','4.8★ y 74 reseñas, sin web. Verificar WhatsApp hoy.'],
+ '3336586088':['alta','4.5★/67, sin web. Verificar WhatsApp.'],
+ '3336194769':['media','173 reseñas pero YA tiene web — solo abordar con rediseño. Verificar WhatsApp antes de invertir tiempo.'],
+ '3336476590':['media','4.7★/144 sin web, pero su número NO tiene WhatsApp → prospectar por LLAMADA.'],
+ '3336303252':['media','4.6★/141 sin web, sin WhatsApp → llamada.'],
+ '3336632629':['media','282 reseñas (el más reseñado de la base) sin web, sin WhatsApp → vale la llamada.'],
+ '3316765422':['baja','4.8★ pero solo 35 reseñas y sin WhatsApp.'],
+ '3315974321':['baja','Sin WhatsApp. Reputación decente (4.7/65).'],
+ '3336339261':['baja','Sin WhatsApp y solo 19 reseñas.'],
+ '3336362753':['baja','Sin WhatsApp (4.7/36).'],
+ '3338259852':['baja','Sin WhatsApp (4.6/81).'],
+ '3338105758':['baja','Sin WhatsApp (4.5/87).'],
+ '3331265110':['baja','Sin WhatsApp (4.5/81).'],
+ '3336173759':['baja','Sin WhatsApp (4.4/140). Si sobra tiempo, llamada.'],
+ '3315617608':['baja','Sin WhatsApp (4.4/47).'],
+ '3336165545':['desc','YA tiene web y su número no tiene WhatsApp — sin ángulo de venta.'],
+ '3335745635':['desc','Ya tiene web, nicho diésel/flotillas, sin WhatsApp.'],
+ '3336360403':['desc','Ya tiene web (4.6/98), sin WhatsApp.'],
+ '3336300770':['desc','Ya tiene web (4.6/123), sin WhatsApp.'],
+ '3338272523':['desc','Solo 13 reseñas y 4.3★ — poco material para la landing y sin WhatsApp.'],
+ '3338330041':['desc','Nombre genérico, 4.1★/20, sin WhatsApp — señal débil.'],
+};
+const aplicarPrio=l=>{const d=PRIO_DEF[(l.id||'').replace(/^l/,'')];
+  if(!l.prio){l.prio=d?d[0]:'baja'; if(d&&!l.notes)l.notes=d[1];}};
+SEED_LEADS.forEach(l=>{l.prio=null;aplicarPrio(l)});
+
+let db=JSON.parse(localStorage.getItem(KEY)||'null');
+if(!db){
+  const v2=JSON.parse(localStorage.getItem('nuclea-crm-v2')||'null');
+  const v1=JSON.parse(localStorage.getItem('kanban-prospectos-v1')||'null');
+  db={ pipe:(v2&&v2.pipe)||v1||SEED_PIPE, leads:(v2&&v2.leads)||SEED_LEADS };
+  db.pipe.forEach(p=>{if(!p.src)p.src=maps(p.name,p.zona)});
+  db.leads.forEach(l=>{if(!l.src)l.src=maps(l.name,l.zona)});
+}
+db.leads.forEach(aplicarPrio);
+/* Verificaciones y promociones posteriores (4-jul) */
+(function(){
+  const DEMO_MARPA='https://nuclea-solutions.github.io/marpa-demo/';
+  const marpaEnPipe=db.pipe.find(p=>/marpa/i.test(p.name));
+  const marpaLead=db.leads.find(l=>l.id==='l3312205133');
+  if(!marpaEnPipe){
+    db.pipe.push({id:'marpa',name:'Servicio Marpa Automotriz',zona:'Col. Analco, GDL',tel:'523312205133',
+      rating:4.9,reviews:62,url:DEMO_MARPA,
+      src:maps('TALLER MECÁNICO MARPA','Cuauhtémoc 59 Guadalajara'),price:1900,col:'contactado',last:'2026-07-04',
+      notes:'WhatsApp + link enviados 4-jul. Landing con su identidad (logo real, estética Tesla) y sus fotos de Maps. Siguiente: enviar PDF y dar seguimiento.'});
+    if(marpaLead) db.leads=db.leads.filter(l=>l.id!=='l3312205133');
+  } else if(!marpaEnPipe.url){
+    marpaEnPipe.url=DEMO_MARPA;  /* asegurar el link de la demo en cards previos */
+  }
+})();
+localStorage.setItem(KEY,JSON.stringify(db));
+let editId=null, editLead=null, filtro='todos';
+const modal=document.getElementById('modal'), lmodal=document.getElementById('lmodal');
+const save=()=>localStorage.setItem(KEY,JSON.stringify(db));
+const hoy=()=>new Date().toISOString().slice(0,10);
+const dias=d=>Math.floor((new Date(hoy())-new Date(d))/864e5);
+const fmt=n=>'$'+Number(n||0).toLocaleString('es-MX');
+const telWa=t=>(t||'').replace(/\D/g,'').replace(/^(\d{10})$/,'52$1');
+const esc=s=>String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function setView(v){
+  document.getElementById('view-pipe').style.display=v==='pipe'?'':'none';
+  document.getElementById('view-leads').style.display=v==='leads'?'':'none';
+  document.getElementById('tab-pipe').classList.toggle('on',v==='pipe');
+  document.getElementById('tab-leads').classList.toggle('on',v==='leads');
+}
+
+/* ============ PIPELINE ============ */
+function render(){
+  const board=document.getElementById('board'); board.innerHTML='';
+  COLS.forEach(col=>{
+    const el=document.createElement('div'); el.className='col';
+    const cards=db.pipe.filter(p=>p.col===col.id);
+    el.innerHTML=`<h2>${col.t}<span class="n">${cards.length}</span></h2>`;
+    el.addEventListener('dragover',e=>{e.preventDefault();el.classList.add('drag')});
+    el.addEventListener('dragleave',()=>el.classList.remove('drag'));
+    el.addEventListener('drop',e=>{e.preventDefault();el.classList.remove('drag');
+      const p=db.pipe.find(x=>x.id===e.dataTransfer.getData('text'));
+      if(p&&p.col!==col.id){p.col=col.id;p.last=hoy();save();render();}});
+    cards.forEach(p=>el.appendChild(card(p)));
+    board.appendChild(el);
+  });
+  stats();
+}
+
+function card(p){
+  const d=dias(p.last||hoy());
+  const activo=['contactado','negociacion'].includes(p.col);
+  const alerta=activo&&d>=3;
+  const el=document.createElement('div');
+  el.className='card'; el.draggable=true;
+  el.addEventListener('dragstart',e=>e.dataTransfer.setData('text',p.id));
+  el.innerHTML=`
+    <div class="nombre">${esc(p.name)}</div>
+    <div class="zona">${esc(p.zona)}</div>
+    <div class="datos">
+      <button class="precio" title="Bajar precio">${fmt(p.price)}</button>
+      <span class="rating">${p.rating?'★ '+p.rating+' · '+(p.reviews||0):''}</span>
+    </div>
+    ${p.col==='cerrado'?'<div class="estado">Pagado</div>':
+      alerta?`<div class="estado alerta">${d} días sin seguimiento</div>`:
+      (activo?`<div class="estado">Último contacto hace ${d}d</div>`:'')}
+    ${p.notes?`<div class="notas">${esc(p.notes)}</div>`:''}
+    <div class="acciones">
+      <button class="mv" data-d="-1">◀</button><button class="mv" data-d="1">▶</button>
+      ${p.url?`<a class="demo" target="_blank" href="${esc(p.url)}">▶ Ver demo</a>`:`<span class="demo off">Sin demo</span>`}
+      ${p.tel?`<a target="_blank" href="https://wa.me/${telWa(p.tel)}?text=${encodeURIComponent(`Hola de nuevo, ¿pudo ver la página que le preparé para ${p.name}?${p.url?' '+p.url:''}`)}">WhatsApp</a>`:''}
+      <a target="_blank" href="${esc(p.src||maps(p.name,p.zona))}">Maps</a>
+      <button class="hoy">Hoy</button>
+      <button class="ed">Editar</button>
+    </div>`;
+  el.querySelector('.precio').onclick=()=>{const b=LADDER.filter(x=>x<(p.price||LADDER[0]));if(b.length){p.price=b[0];save();render();}};
+  el.querySelectorAll('.mv').forEach(b=>b.onclick=()=>{
+    const i=COLS.findIndex(c=>c.id===p.col)+Number(b.dataset.d);
+    if(i>=0&&i<COLS.length){p.col=COLS[i].id;p.last=hoy();save();render();}});
+  el.querySelector('.hoy').onclick=()=>{p.last=hoy();save();render();};
+  el.querySelector('.ed').onclick=()=>abrirModal(p.id);
+  return el;
+}
+
+function stats(){
+  const act=db.pipe.filter(p=>!['cerrado','perdido'].includes(p.col));
+  const cerr=db.pipe.filter(p=>p.col==='cerrado');
+  const pend=db.pipe.filter(p=>['contactado','negociacion'].includes(p.col)&&dias(p.last||hoy())>=3);
+  document.getElementById('stats').innerHTML=`
+    <div class="stat"><b>${act.length}</b><span>Activos</span></div>
+    <div class="stat"><b>${fmt(act.reduce((s,p)=>s+(+p.price||0),0))}</b><span>Pipeline</span></div>
+    <div class="stat"><b>${fmt(cerr.reduce((s,p)=>s+(+p.price||0),0))}<em> · ${cerr.length}</em></b><span>Cerrado</span></div>
+    <div class="stat"><b>${pend.length}</b><span>Por dar seguimiento</span></div>
+    <div class="stat"><b>${db.leads.length}</b><span>Leads en base</span></div>`;
+}
+
+function abrirModal(id){
+  editId=id||null;
+  const p=db.pipe.find(x=>x.id===id)||{price:1900,col:'prospectado',last:hoy()};
+  document.getElementById('m-titulo').textContent=id?'Editar prospecto':'Prospecto';
+  const del=document.getElementById('m-del');
+  del.style.visibility=id?'visible':'hidden'; del.textContent='Eliminar';
+  document.getElementById('f-col').innerHTML=COLS.map(c=>`<option value="${c.id}" ${c.id===p.col?'selected':''}>${c.t}</option>`).join('');
+  ['name','zona','tel','rating','reviews','url','src','price','notes'].forEach(k=>document.getElementById('f-'+k).value=p[k]??'');
+  document.getElementById('f-last').value=p.last||hoy();
+  const e=document.getElementById('escalera');
+  e.innerHTML=LADDER.map(v=>`<button type="button" class="${v==+p.price?'activo':''}">${fmt(v)}</button>`).join('');
+  [...e.children].forEach((b,i)=>b.onclick=()=>{document.getElementById('f-price').value=LADDER[i];
+    [...e.children].forEach(x=>x.classList.remove('activo'));b.classList.add('activo');});
+  modal.showModal();
+}
+function guardar(){
+  const g=k=>document.getElementById('f-'+k).value.trim();
+  if(!g('name'))return;
+  const v={name:g('name'),zona:g('zona'),tel:g('tel'),rating:+g('rating')||'',reviews:+g('reviews')||'',
+    url:g('url'),src:g('src'),price:+g('price')||0,last:g('last')||hoy(),col:g('col'),notes:document.getElementById('f-notes').value};
+  if(editId)Object.assign(db.pipe.find(x=>x.id===editId),v);
+  else db.pipe.push(Object.assign({id:'p'+Date.now()},v));
+  save();render();modal.close();
+}
+function borrar(){
+  const b=document.getElementById('m-del');
+  if(b.textContent!=='¿Seguro?'){b.textContent='¿Seguro?';return;}
+  db.pipe=db.pipe.filter(x=>x.id!==editId);save();render();modal.close();
+}
+
+/* ============ LEADS ============ */
+function setFiltro(el){
+  filtro=el.dataset.f;
+  document.querySelectorAll('.filtro').forEach(f=>f.classList.toggle('on',f===el));
+  renderLeads();
+}
+const WA_PATH='M16 3C9.4 3 4 8.3 4 14.9c0 2.6.8 5 2.3 7L4 29l7.3-2.3c1.9 1 4 1.6 6.2 1.6h.5c6.6 0 12-5.3 12-11.9C30 8.3 24.6 3 16 3zm5.9 16.9c-.3.8-1.5 1.5-2.4 1.7-.6.1-1.4.2-4.2-.9-3.5-1.5-5.8-5-6-5.3-.2-.2-1.4-1.9-1.4-3.6s.9-2.5 1.2-2.9c.3-.3.7-.4.9-.4h.6c.2 0 .5-.1.7.5l1 2.5c.1.2.2.5 0 .7l-.4.6-.6.6c-.2.2-.4.4-.2.7.2.4 1 1.7 2.2 2.7 1.5 1.4 2.8 1.8 3.2 2 .4.2.6.1.8-.1l1.2-1.4c.3-.3.5-.3.8-.2l2.4 1.1c.4.2.6.3.7.5.1.1.1.7-.5 1.2z';
+function waIcon(l){
+  const svg=(cls,slash)=>`<svg class="waico ${cls}" viewBox="0 0 32 32"><path fill="currentColor" d="${WA_PATH}"/>${slash?'<line x1="4" y1="28" x2="28" y2="4" stroke="rgba(250,250,250,.75)" stroke-width="2.5" stroke-linecap="round"/>':''}</svg>`;
+  if(l.wa==='no') return `<span title="Sin WhatsApp">${svg('noo',true)}</span>`;
+  const link=`https://wa.me/${telWa(l.tel)}`;
+  if(l.wa==='si') return `<a class="wa-link" target="_blank" href="${link}" title="Abrir WhatsApp">${svg('si')}</a>`;
+  return `<a class="wa-link" target="_blank" href="${link}" title="Sin verificar — clic para probar en WhatsApp">${svg('q')}</a>`;
+}
+const P_T={alta:['ALTA','p-alta'],media:['MEDIA','p-media'],baja:['BAJA','p-baja'],desc:['DESCARTAR','p-desc']};
+const P_R={alta:0,media:1,baja:2,desc:3};
+function renderLeads(){
+  const q=(document.getElementById('q').value||'').toLowerCase();
+  const rows=db.leads
+    .filter(l=>filtro==='todos'||l.prio===filtro)
+    .filter(l=>!q||(l.name+' '+l.zona).toLowerCase().includes(q))
+    .sort((a,b)=>(P_R[a.prio]-P_R[b.prio])||(b.reviews-a.reviews));
+  document.getElementById('tbody').innerHTML=rows.length?rows.map(l=>`
+    <tr class="${l.prio==='desc'?'fila-desc':''}">
+      <td><span class="prio ${P_T[l.prio][1]}">${P_T[l.prio][0]}</span></td>
+      <td><a class="neg" target="_blank" href="${esc(l.src||maps(l.name,l.zona))}" title="Abrir en la fuente">${esc(l.name)}</a>
+        <span class="sub">${esc(l.zona)}</span>
+        ${l.notes?`<span class="sub" style="text-transform:none;letter-spacing:.15px;font-weight:400;color:var(--t55)">${esc(l.notes)}</span>`:''}</td>
+      <td style="font-variant-numeric:tabular-nums">${l.rating?'★ '+l.rating+' <span style="color:var(--t35)">('+l.reviews+')</span>':'—'}</td>
+      <td style="font-variant-numeric:tabular-nums">${esc(l.tel)}</td>
+      <td>${waIcon(l)}</td>
+      <td>${l.web?esc(l.web):'<span style="color:var(--t35)">—</span>'}</td>
+      <td><a class="fuente" target="_blank" href="${esc(l.src||maps(l.name,l.zona))}">${esc(l.fuente)} ↗</a></td>
+      <td style="text-align:right;white-space:nowrap">
+        <button class="mini" onclick="abrirLead('${l.id}')">Editar</button>
+        ${l.prio!=='desc'?`<button class="mini" onclick="promover('${l.id}')">→ Pipeline</button>`:''}
+      </td>
+    </tr>`).join(''):'<tr><td colspan="8" class="vacio">Sin resultados</td></tr>';
+  const n=p=>db.leads.filter(l=>l.prio===p).length;
+  document.getElementById('stats-leads').innerHTML=`
+    <div class="stat"><b>${db.leads.length}</b><span>Leads en base</span></div>
+    <div class="stat"><b>${n('alta')}</b><span>Alta · verificar WA</span></div>
+    <div class="stat"><b>${n('media')}</b><span>Media · llamar</span></div>
+    <div class="stat"><b>${n('baja')}</b><span>Baja</span></div>
+    <div class="stat"><b>${n('desc')}</b><span>Descartar</span></div>`;
+}
+function promover(id){
+  const l=db.leads.find(x=>x.id===id); if(!l)return;
+  db.pipe.push({id:'p'+Date.now(),name:l.name,zona:l.zona,tel:l.tel,rating:l.rating,reviews:l.reviews,
+    url:'',src:l.src||maps(l.name,l.zona),price:1900,col:'prospectado',last:hoy(),
+    notes:(l.notes?l.notes+' · ':'')+'Fuente: '+l.fuente});
+  db.leads=db.leads.filter(x=>x.id!==id);
+  save();render();renderLeads();
+}
+function abrirLead(id){
+  editLead=id||null;
+  const l=db.leads.find(x=>x.id===id)||{wa:'q',fuente:'Google Maps'};
+  document.getElementById('l-titulo').textContent=id?'Editar lead':'Lead';
+  const del=document.getElementById('l-del');
+  del.style.visibility=id?'visible':'hidden'; del.textContent='Eliminar';
+  ['name','zona','tel','rating','reviews','web','src','notes'].forEach(k=>document.getElementById('l-'+k).value=l[k]??'');
+  document.getElementById('l-wa').value=l.wa||'q';
+  document.getElementById('l-fuente').value=l.fuente||'Google Maps';
+  document.getElementById('l-prio').value=l.prio||'baja';
+  lmodal.showModal();
+}
+function guardarLead(){
+  const g=k=>document.getElementById('l-'+k).value.trim();
+  if(!g('name'))return;
+  const v={name:g('name'),zona:g('zona'),tel:g('tel'),rating:+g('rating')||'',reviews:+g('reviews')||'',
+    wa:document.getElementById('l-wa').value,web:g('web'),src:g('src'),fuente:document.getElementById('l-fuente').value,
+    prio:document.getElementById('l-prio').value,notes:document.getElementById('l-notes').value};
+  if(editLead)Object.assign(db.leads.find(x=>x.id===editLead),v);
+  else db.leads.push(Object.assign({id:'l'+Date.now()},v));
+  save();renderLeads();render();lmodal.close();
+}
+function borrarLead(){
+  const b=document.getElementById('l-del');
+  if(b.textContent!=='¿Seguro?'){b.textContent='¿Seguro?';return;}
+  db.leads=db.leads.filter(x=>x.id!==editLead);save();renderLeads();render();lmodal.close();
+}
+
+render(); renderLeads();
+</script>
+</body>
+</html>
